@@ -1,0 +1,193 @@
+
+LAB 1 — Run Your First Container
+Goal: Run and inspect a container
+Steps
+1. Pull an image:
+docker pull hello-world  (step 2)
+2. Run it:
+docker run hello-world  (step 1)
+
+docker ps   (checks for running containers)
+
+3. Check container history:
+docker ps -a          (step 3 – checks status of previous containers that were running)
+Expected Result
+• Docker prints a “Hello from Docker!” message.
+• You see a stopped container in docker ps -a.
+
+
+LAB 2 — Run a Web Server (Nginx)
+Goal: Run a web server and access it locally
+Steps
+1. Run nginx:    (step 4)
+docker run -d -p 8080:80 --name webserver nginx
+
+(8080:80 – port number for HTTP webserver)
+(webserver – unique name for the webserver)
+2. Visit in browser:
+http://localhost:8080            (step 5)
+
+3. View logs:           (step 6)
+docker logs webserver
+4. Stop container:
+docker stop webserver     (step 7)
+
+5. Remove container:
+docker rm webserver              (step 8)
+Expected Result
+• You can open the default Nginx homepage on port 8080.
+• Logs show HTTP requests.
+
+LAB 3 — Build Your Own Image
+Goal: Create and run a custom Docker image
+Steps
+1. Create a folder:
+mkdir myapp ----------------step 1
+cd myapp ---------------------step 2
+2. Create a file
+app.py:
+print("Hello from inside a Docker container!")
+3. Create a Dockerfile:
+FROM python:3.10-slim
+COPY app.py /app.py
+CMD ["python", "app.py"]
+4. Build the image:
+docker build -t mypythonapp .
+5. Run it:
+docker run mypythonapp
+Expected Result
+• Terminal prints:
+Hello from inside a Docker container!
+
+LAB 4 — Persist Data Using Volumes
+Goal: Understand persistent storage
+Steps
+1. Create volume:
+docker volume create mydata       ------------step 1
+2. Run a container using the volume:
+docker run -it -v mydata:/data alpine sh  ------------(it will install)- step 2
+3. Inside the container:
+echo "Hello Docker Volume!" > /data/msg.txt    --------------step 3
+exit
+4. Check the file:
+cat /data/msg.txt      ------------step 5
+Expected Result
+Hello Docker Volume!
+• The text file persists across containers.
+
+LAB 5 — Docker Networking
+Goal: Make containers communicate on a custom network
+Steps
+1. Create a network:
+docker network create mynet
+2. Run a Redis container:
+docker run -d --name redis --network=mynet redis
+
+Expected:
+<container-id>
+
+3. Run a test alpine container:
+docker run -it --network=mynet alpine sh
+4. Inside alpine container:
+Install redis CLI:
+apk add redis
+
+Run ping test:
+redis-cli -h redis ping
+Expected Result:
+PONG
+
+LAB 6 — Multi-Container App Using Docker Compose
+Goal: Use Compose to run a web + database stack
+Steps
+1. Create a folder:
+mkdir stack && cd stack
+2. Create docker-compose.yml:
+version: "3.9"
+services:
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+  redis:
+    image: redis
+3. Start the environment / stack:
+docker compose up -d
+
+Expected Output:
+✔ Container stack-web-1   Started
+✔ Container stack-redis-1 Started
+4. Check running containers:
+docker compose ps
+
+Epected outcome:
+NAME             IMAGE   COMMAND          STATUS
+stack-web-1      nginx   "/docker-entry…" Up (running)
+stack-redis-1    redis   "docker-entry…"  Up (running)
+5. Shut down / stop:
+docker compose down
+Expected Result
+• Nginx running on port 8080
+• Redis container running in the background
+
+LAB 7 — Inspect Container Internals
+Goal: Learn introspection commands
+Steps
+Run any container:
+docker run -d --name test nginx
+Inspect:
+docker inspect test (inspect metadata)
+docker stats test       (check runtime stats- shows CPU, RAM)
+docker top test (View processes)
+docker exec -it test bash        (Open shell inside container)
+
+
+Expected Result
+• You can see metadata, processes, resource usage, and shell into the container.
+LAB 8 — Multi-Stage Build (Optimise Image Size)
+Goal: Create a small production image
+Dockerfile
+# Build stage
+FROM node:18 as builder
+WORKDIR /app
+COPY . .
+RUN npm install && npm run build
+
+# Production stage
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+Steps
+docker build -t optimized-app .
+docker run -d -p 8080:80 optimized-app
+Expected Result
+• App runs on Nginx using a lightweight image.
+
+LAB 9 — Push Image to Docker Hub
+Goal: Share your image via registry
+Steps
+1. Log in:
+docker login
+2. Tag image:
+docker tag mypythonapp <your-dockerhub-username>/mypythonapp:v1
+3. Push image:
+docker push <your-dockerhub-username>/mypythonapp:v1
+4. Test from another machine:
+docker pull <your-dockerhub-username>/mypythonapp:v1
+Expected Result
+• Your image becomes publicly (or privately) available.
+
+LAB 10 — Clean Up Docker Resources
+Goal: Manage disk space
+Steps
+Remove stopped containers:
+docker container prune
+Remove unused images:
+docker image prune
+Remove unused volumes:
+docker volume prune
+Remove everything unused:
+docker system prune -a
+Expected Result
+• System disk usage decreases significantly.
+
+
