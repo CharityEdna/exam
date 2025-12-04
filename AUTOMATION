@@ -1,0 +1,217 @@
+# //--------------------------------------------------------------
+1. DOCKER ANSWERS
+1.create folder and move into it
+
+$ mkdir b20244
+$ cd b20244
+$ pwd
+$nano index.html
+
+2.Create an index.html file
+#!/bin/bash
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Nginx Docker Test</title>
+</head>
+<body>
+  <h1>Hello! This page is served from an NGINX Docker container.</h1>
+  <p>Question 3 — simple demo.</p>
+</body>
+</html>
+
+cat index.html
+
+3.Create a dockerfile
+
+#!/bin/bash
+# Use the official nginx image based on Alpine Linux (small)
+FROM nginx:alpine
+
+# Copy our index.html into the location nginx serves by default
+COPY index.html /usr/share/nginx/html/
+
+# Document that the container listens on port 80
+EXPOSE 80
+
+cat dockerfile
+
+4.build the docker image
+# Run this in the same folder (the . means current directory):
+
+docker build -t mynginx:1.0.
+
+# What it does: Docker reads the Dockerfile and creates an image named mynginx:1.0.
+
+Run the container
+docker run -d --name mynginx_container -p 8080:80 mynginx:1.0
+
+output:
+# $ docker run -d --name mynginx_container -p 8080:80 mynginx:1.0
+# f594410e28d0d850a506868b6489ebb97bd0b64af2192f7e729febdc43308780
+
+
+$ docker ps (to verify container is running)
+# CONTAINER ID   IMAGE         COMMAND                  CREATED              STATUS              PORTS                                     NAMES
+# f594410e28d0   mynginx:1.0   "/docker-entrypoint.…"   About a minute ago   Up About a minute   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   mynginx_container
+
+Type in browser: http://localhost:8080
+
+
+
+# -------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------
+2. BASH SHELL ANSWERS
+
+step 1: nano scan_directory.sh
+step 2: sudo chmod +x scan_directory.sh
+step 3: sudo ./scan_directory.sh
+
+step 4: 
+#!/bin/bash
+#AUTHOR: 
+#Script Name: scan_directory.sh
+# Purpose:
+#   1. Scan /var/www/html for world-writable files.
+#   2. Log file names + permissions.
+#   3. Check if Apache is running; restart if needed.
+#   4. Log CPU and RAM usage.
+# Date: $(date)
+# ============================================
+
+# Configuration Variables
+SCAN_DIR="/var/www/html"           # Directory to scan for worl>
+LOG_FILE="/var/log/system_monitor.log"  # Log file path
+APACHE_SERVICE="apache2"           # Apache service name (use ">
+TEMP_LOG="/tmp/system_monitor_temp.log"  # Temporary log file
+
+# Create log directory if it doesn't exist
+LOG_DIR=$(dirname "$LOG_FILE")
+if [ ! -d "$LOG_DIR" ]; then
+    mkdir -p "$LOG_DIR"
+fi
+
+# Initialize temporary log
+echo "=========================================" > "$TEMP_LOG"
+echo "System Monitor Report - $(date)" >> "$TEMP_LOG"
+echo "=========================================" >> "$TEMP_LOG"
+
+# i. Scan for world-writable files (chmod 777)
+echo "" >> "$TEMP_LOG"
+echo "1. SCANNING FOR WORLD-WRITABLE FILES in $SCAN_DIR" >> "$TEMP_LOG"
+echo "-------------------------------------------------" >> "$TEMP_LOG"
+
+# Check if directory exists
+if [ -d "$SCAN_DIR" ]; then
+    # Find world-writable files (777 permissions)
+    world_writable_files=$(find "$SCAN_DIR" -type f -perm 777 2>/dev/null)
+
+    if [ -n "$world_writable_files" ]; then
+        echo "WARNING: Found world-writable files:" >> "$TEMP_LOG"
+        while IFS= read -r file; do
+            if [ -n "$file" ]; then
+                permissions=$(stat -c "%A %a" "$file" 2>/dev/null)
+                echo "  File: $file" >> "$TEMP_LOG"
+                echo "  Permissions: $permissions" >> "$TEMP_LOG"
+            fi
+        done <<< "$world_writable_files"
+        echo "Total world-writable files found: $(echo "$world_writable_files" | wc -l)" >> "$TEMP_LOG"
+    else
+        echo "No world-writable files found." >> "$TEMP_LOG"
+    fi
+else
+    echo "ERROR: Directory $SCAN_DIR does not exist." >> "$TEMP_LOG"
+fi
+
+# ii. Check Apache service status
+if systemctl list-unit-files | grep -q "$APACHE_SERVICE.service"; then
+    # Check if Apache is running
+    if systemctl is-active --quiet "$APACHE_SERVICE"; then
+        echo "Apache is running normally." >> "$TEMP_LOG"
+        apache_status="running"
+    else
+        echo "WARNING: Apache is NOT running!" >> "$TEMP_LOG"
+        echo "Attempting to restart Apache..." >> "$TEMP_LOG"
+
+        # Try to restart Apache
+        if systemctl restart "$APACHE_SERVICE"; then
+            echo "SUCCESS: Apache restarted successfully." >> "$TEMP_LOG"
+            apache_status="restarted"
+        else
+            echo "ERROR: Failed to restart Apache." >> "$TEMP_LOG"
+            apache_status="failed"
+        fi
+    fi
+
+    # Get Apache service status details
+    echo "" >> "$TEMP_LOG"
+    systemctl status "$APACHE_SERVICE" --no-pager | head -5 >> "$TEMP_LOG"
+
+elif service --status-all 2>/dev/null | grep -Fq "$APACHE_SERVICE"; then
+    # Alternative check for older systems using service command
+    if service "$APACHE_SERVICE" status | grep -q "running"; then
+        echo "Apache is running normally (service command)." >> "$TEMP_LOG"
+        apache_status="running"
+    else
+        echo "WARNING: Apache is NOT running!" >> "$TEMP_LOG"
+        echo "Attempting to restart Apache..." >> "$TEMP_LOG"
+
+         if service "$APACHE_SERVICE" restart; then
+            echo "SUCCESS: Apache restarted successfully." >> "$TEMP_LOG"
+            apache_status="restarted"
+        else
+            echo "ERROR: Failed to restart Apache." >> "$TEMP_LOG"
+            apache_status="failed"
+        fi
+    fi
+else
+    echo "ERROR: Apache service not found. Check if $APACHE_SERVICE is installed." >> "$TEMP_LOG"
+    apache_status="not_found"
+fi
+
+
+# iii. Log CPU and RAM usage
+echo "" >> "$TEMP_LOG"
+echo "3. SYSTEM RESOURCE USAGE" >> "$TEMP_LOG"
+echo "--------------------------------------" >> "$TEMP_LOG"
+
+# Get CPU usage (using top for most accurate reading)
+cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+echo "CPU Usage: ${cpu_usage}%" >> "$TEMP_LOG"
+
+# Get memory usage
+memory_info=$(free -h | grep Mem)
+total_mem=$(echo "$memory_info" | awk '{print $2}')
+used_mem=$(echo "$memory_info" | awk '{print $3}')
+free_mem=$(echo "$memory_info" | awk '{print $4}')
+mem_percent=$(free | grep Mem | awk '{printf "%.1f", $3/$2 * 100}')
+echo "Memory Usage: $used_mem used, $free_mem free (Total: $total_mem)" >> "$TEMP_LOG"
+echo "Memory Usage Percentage: ${mem_percent}%" >> "$TEMP_LOG"
+
+# Get load average
+load_avg=$(uptime | awk -F'load average:' '{print $2}')
+echo "Load Average: $load_avg" >> "$TEMP_LOG"
+
+# Get disk usage for root partition
+disk_usage=$(df -h / | awk 'NR==2 {print $5}')
+echo "Root Partition Usage: $disk_usage" >> "$TEMP_LOG"
+
+# Append temporary log to main log file
+cat "$TEMP_LOG" >> "$LOG_FILE"
+
+# Clean up temporary file
+rm -f "$TEMP_LOG"
+
+# Final console message
+echo "System monitoring completed. Check $LOG_FILE for details."
+
+# Exit with appropriate code
+if [ "$apache_status" = "failed" ] || [ "$apache_status" = "not_found" ]; then
+    exit 1
+else
+    exit 0
+fi
+
+step 3: sudo cat /var/log/system_monitor.log
